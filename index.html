@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socket.IO Chat</title>
+</head>
+<body style="background-color: #f0f0f0; color: #333; line-height: 1.6; padding: 20px; font-size: 16px; font-family: 'Arial', sans-serif;">
+  <div id="chat" style="width: 80%; max-width: 1200px; margin: 0 auto; background-color: #fff; padding: 40px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+    <h1 style="font-size: 36px; text-align: center; color: #333; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 20px;">Chat Personalizado</h1>
+    <input id="mensaje" placeholder="Escribe un mensaje..." style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px;" />
+    <input id="archivo" type="file" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px;" />
+    <button onclick="enviarMensaje()" style="background-color: #333; color: #fff; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.3s ease;">Enviar</button>
+    <ul id="mensajes" style="list-style: none; padding: 0; margin-top: 20px;"></ul>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let nombreUsuario = '';
+
+    // Establecer nombre de usuario al cargar la página
+    document.getElementById('mensaje').addEventListener('change', (e) => {
+      nombreUsuario = e.target.value;
+    });
+
+    // Enviar mensaje o archivo
+    function enviarMensaje() {
+      const mensaje = document.getElementById('mensaje').value;
+      const archivo = document.getElementById('archivo').files[0];
+      const datos = { nombre: nombreUsuario, mensaje };
+
+      if (archivo) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          datos.archivo = {
+            nombre: archivo.name,
+            tipo: archivo.type,
+            contenido: e.target.result,
+          };
+          socket.emit('mensaje', datos);
+        };
+        reader.readAsDataURL(archivo);
+      } else {
+        socket.emit('mensaje', datos);
+      }
+
+      document.getElementById('mensaje').value = '';
+      document.getElementById('archivo').value = '';
+    }
+
+    // Recibir mensajes y archivos
+    socket.on('mensaje', (data) => {
+      const lista = document.getElementById('mensajes');
+      const item = document.createElement('li');
+      item.style = "margin-bottom: 10px; padding: 10px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 5px;";
+      item.innerHTML = `<strong>${data.nombre}:</strong> ${data.mensaje}`;
+
+      // Mostrar archivos si los hay
+      if (data.archivo) {
+        if (data.archivo.tipo.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.src = data.archivo.contenido;
+          img.style = "max-width: 300px; display: block; margin-top: 10px;";
+          item.appendChild(img);
+        } else if (data.archivo.tipo.startsWith('video/')) {
+          const video = document.createElement('video');
+          video.src = data.archivo.contenido;
+          video.controls = true;
+          video.style = "max-width: 300px; display: block; margin-top: 10px;";
+          item.appendChild(video);
+        }
+      }
+
+      lista.appendChild(item);
+    });
+  </script>
+</body>
+</html>
